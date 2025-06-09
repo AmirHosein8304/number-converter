@@ -1,12 +1,10 @@
 def decimal_to_base(num, base):
-    if decimal_num == 0:
+    if num == 0:
         return "0"
     digits = []
     while num:
         digits.append(str(num % base))
         num //= base
-    if decimal_num < 0:
-        digits.append("-")
     return "".join(digits[::-1])
 
 def base_to_decimal(num_str, base):

@@ -1,135 +1,144 @@
+import sys
+from PyQt5.QtWidgets import (
+    QApplication, QWidget, QLabel, QPushButton, QVBoxLayout, QHBoxLayout,
+    QComboBox, QLineEdit, QStackedWidget, QMessageBox
+)
+
+# Your original functions
 def decimal_to_base(num, base):
-    """Converts a decimal number to a number in the specified base."""
-    # Handle the case of 0 separately
+    num = abs(num)
     if num == 0:
         return "0"
-
-    # Characters to use for digits, supporting up to base 36
-    digits_map = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    
-    # Handle negative numbers
-    is_negative = num < 0
-    if is_negative:
-        num = -num  # Work with the positive version of the number
-
-    result_digits = []
-    while num > 0:
-        # Use the map to get the correct character for bases > 10
-        result_digits.append(digits_map[num % base])
+    digits = []
+    while num:
+        if num % base >= 10:
+            digits.append(chr(ord('A') + num % base - 10))
+        else:
+            digits.append(str(num % base))
         num //= base
-    
-    # Combine the digits and reverse them to get the correct order
-    result_str = "".join(result_digits[::-1])
-
-    # Prepend the negative sign if the original number was negative
-    return "-" + result_str if is_negative else result_str
+    return "".join(digits[::-1])
 
 def base_to_decimal(num_str, base):
-    """Converts a number string from a specified base to a decimal number."""
     num_str = str(num_str)
     if not num_str:
         return 0
-    
     is_negative = num_str[0] == "-"
     if is_negative:
         num_str = num_str[1:]
-        
     decimal = 0
     for digit in num_str:
-        if '0' <= digit <= '9':
+        if digit.isdigit():
             value = int(digit)
         else:
-            # Assumes A-Z for digits 10 and above
             value = ord(digit.upper()) - ord('A') + 10
-        
         if value >= base:
             raise ValueError(f"Invalid digit {digit} for base {base}")
-            
         decimal = decimal * base + value
-        
     return -decimal if is_negative else decimal
 
 def convert_between_bases(num_str, from_base, to_base):
-    """Converts a number from one base to another."""
     decimal = base_to_decimal(num_str, from_base)
     return decimal_to_base(decimal, to_base)
 
-def two_complement(num_decimal, k):
-    """
-    Calculates the k-bit two's complement of a decimal number.
-    """
-    if not isinstance(num_decimal, int):
-        raise TypeError("num_decimal must be an integer.")
-    if not isinstance(k, int) or k <= 0:
-        raise ValueError("k must be a positive integer representing the number of bits.")
+def two_complement(num, k):
+    num = base_to_decimal(num, 2)
+    result = 2**k - num
+    return decimal_to_base(result, 2)
 
-    # Calculate the range for a k-bit two's complement number
-    min_val = -(2**(k-1))
-    max_val = (2**(k-1)) - 1
+# GUI Panel
+class ConverterApp(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Base Converter & 2's Complement Tool")
+        self.setGeometry(300, 200, 400, 250)
 
-    if not (min_val <= num_decimal <= max_val):
-        raise ValueError(f"Number {num_decimal} is out of range for {k}-bit two's complement. "
-                         f"Range: [{min_val}, {max_val}]")
+        self.layout = QVBoxLayout()
 
-    if num_decimal < 0:
-        # For negative numbers, two's complement is 2^k - |num_decimal|
-        result = 2**k + num_decimal
-    else:
-        # For positive numbers, it's just the number itself
-        result = num_decimal
+        # Dropdown to choose option
+        self.option_select = QComboBox()
+        self.option_select.addItems(["Select Option", "1: Base Converter", "2: 2's Complement"])
+        self.option_select.currentIndexChanged.connect(self.switch_panel)
+        self.layout.addWidget(self.option_select)
 
-    # Convert the result to a binary string
-    binary_representation = decimal_to_base(result, 2)
-    
-    # Pad with leading zeros to ensure it has k bits
-    return binary_representation.zfill(k)
+        # Panels
+        self.stack = QStackedWidget()
+        self.stack.addWidget(QWidget())  # Empty placeholder
+        self.stack.addWidget(self.create_base_converter_panel())
+        self.stack.addWidget(self.create_twos_complement_panel())
+        self.layout.addWidget(self.stack)
 
-# Example usage and tests:
+        self.setLayout(self.layout)
 
-# Test decimal_to_base
-print(f"Decimal 10 to base 2: {decimal_to_base(10, 2)}") # Expected: 1010
-print(f"Decimal 16 to base 16: {decimal_to_base(16, 16)}") # Expected: 10
-print(f"Decimal 255 to base 16: {decimal_to_base(255, 16)}") # Expected: FF
-print(f"Decimal -10 to base 2: {decimal_to_base(-10, 2)}") # Expected: -1010
-print(f"Decimal 0 to base 10: {decimal_to_base(0, 10)}") # Expected: 0
+    def create_base_converter_panel(self):
+        panel = QWidget()
+        layout = QVBoxLayout()
 
-# Test base_to_decimal
-print(f"Binary 1010 to decimal: {base_to_decimal('1010', 2)}") # Expected: 10
-print(f"Hex 10 to decimal: {base_to_decimal('10', 16)}") # Expected: 16
-print(f"Hex FF to decimal: {base_to_decimal('FF', 16)}") # Expected: 255
-print(f"Binary -1010 to decimal: {base_to_decimal('-1010', 2)}") # Expected: -10
-print(f"Empty string to decimal: {base_to_decimal('', 10)}") # Expected: 0
+        self.input_num = QLineEdit()
+        self.from_base = QLineEdit()
+        self.to_base = QLineEdit()
+        self.result_base = QLabel("Result: ")
 
-# Test convert_between_bases
-print(f"Convert 1010 (base 2) to base 10: {convert_between_bases('1010', 2, 10)}") # Expected: 10
-print(f"Convert FF (base 16) to base 2: {convert_between_bases('FF', 16, 2)}") # Expected: 11111111
-print(f"Convert 10 (base 16) to base 10: {convert_between_bases('10', 16, 10)}") # Expected: 16
+        convert_btn = QPushButton("Convert")
+        convert_btn.clicked.connect(self.run_base_converter)
 
-# Test two_complement
-print(f"Two's complement of -6 with 4 bits: {two_complement(-6, 4)}") # Expected: 1010
-print(f"Two's complement of 6 with 4 bits: {two_complement(6, 4)}")   # Expected: 0110
-print(f"Two's complement of -1 with 4 bits: {two_complement(-1, 4)}") # Expected: 1111
-print(f"Two's complement of 0 with 4 bits: {two_complement(0, 4)}")   # Expected: 0000
-print(f"Two's complement of -8 with 4 bits: {two_complement(-8, 4)}") # Expected: 1000 (min value)
-print(f"Two's complement of 7 with 4 bits: {two_complement(7, 4)}")   # Expected: 0111 (max value)
+        layout.addWidget(QLabel("Number:"))
+        layout.addWidget(self.input_num)
+        layout.addWidget(QLabel("From Base:"))
+        layout.addWidget(self.from_base)
+        layout.addWidget(QLabel("To Base:"))
+        layout.addWidget(self.to_base)
+        layout.addWidget(convert_btn)
+        layout.addWidget(self.result_base)
 
-# Test error handling for two_complement
-try:
-    two_complement(-9, 4)
-except ValueError as e:
-    print(f"Error: {e}") # Expected: Number -9 is out of range for 4-bit two's complement. Range: [-8, 7]
+        panel.setLayout(layout)
+        return panel
 
-try:
-    two_complement(8, 4)
-except ValueError as e:
-    print(f"Error: {e}") # Expected: Number 8 is out of range for 4-bit two's complement. Range: [-8, 7]
+    def create_twos_complement_panel(self):
+        panel = QWidget()
+        layout = QVBoxLayout()
 
-try:
-    two_complement(5, 0)
-except ValueError as e:
-    print(f"Error: {e}") # Expected: k must be a positive integer representing the number of bits.
+        self.input_twos = QLineEdit()
+        self.input_bits = QLineEdit()
+        self.result_twos = QLabel("Result: ")
 
-try:
-    two_complement(5, 4j)
-except TypeError as e:
-    print(f"Error: {e}") # Expected: num_decimal must be an integer.
+        calc_btn = QPushButton("Calculate")
+        calc_btn.clicked.connect(self.run_twos_complement)
+
+        layout.addWidget(QLabel("Binary Number:"))
+        layout.addWidget(self.input_twos)
+        layout.addWidget(QLabel("Number of Bits (k):"))
+        layout.addWidget(self.input_bits)
+        layout.addWidget(calc_btn)
+        layout.addWidget(self.result_twos)
+
+        panel.setLayout(layout)
+        return panel
+
+    def switch_panel(self, index):
+        self.stack.setCurrentIndex(index)
+
+    def run_base_converter(self):
+        try:
+            num = self.input_num.text()
+            from_b = int(self.from_base.text())
+            to_b = int(self.to_base.text())
+            result = convert_between_bases(num, from_b, to_b)
+            self.result_base.setText(f"Result: {result}")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", str(e))
+
+    def run_twos_complement(self):
+        try:
+            num = self.input_twos.text()
+            k = int(self.input_bits.text())
+            result = two_complement(num, k)
+            self.result_twos.setText(f"Result: {result}")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", str(e))
+
+# Run the app
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = ConverterApp()
+    window.show()
+    sys.exit(app.exec_())

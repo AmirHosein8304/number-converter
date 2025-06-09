@@ -38,4 +38,13 @@ def two_complement(num, k):
     result = 2**k - num
     return decimal_to_base(result, 2)
     
-print(two_complement(decimal_to_base(8,2),4))
+Option = input("Enter the option (1 or 2): ")
+if Option == "1":
+    num_str = input("Enter the number: ")
+    from_base = int(input("Enter the base of the number: "))
+    to_base = int(input("Enter the target base: "))
+    print(f"Result: {convert_between_bases(num_str, from_base, to_base)}")
+if Option == "2":
+    num_decimal = int(input("Enter the decimal number: "))
+    k = int(input("Enter the number of bits: "))
+    print(f"Result: {two_complement(num_decimal, k)}")

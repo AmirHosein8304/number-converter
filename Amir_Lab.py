@@ -1,14 +1,13 @@
 import sys
+import random
 from PyQt5.QtWidgets import (
-    QApplication, QWidget, QLabel, QLineEdit, QPushButton,
-    QVBoxLayout, QHBoxLayout, QComboBox, QStackedWidget, QMessageBox, QFrame
+    QApplication, QWidget, QLabel, QPushButton, QLineEdit,
+    QVBoxLayout, QStackedWidget, QFrame
 )
-from PyQt5.QtGui import QFont, QColor, QPalette
-from PyQt5.QtCore import QPropertyAnimation, QRect, QEasingCurve
-from qt_material import apply_stylesheet
+from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtGui import QPalette, QColor, QFont, QPainter, QPen, QFontDatabase
 
-
-# ==== YOUR ORIGINAL LOGIC ====
+# === Your Original Logic (unchanged) ===
 def decimal_to_base(num, base):
     num = abs(num)
     if num == 0:
@@ -49,117 +48,227 @@ def two_complement(num, k):
     result = 2**k - num
     return decimal_to_base(result, 2)
 
-
-# ==== MODERN STYLED GUI ====
-class ModernConverter(QWidget):
+# === Moving Symbol Background with multi-color rain ===
+class MovingSymbolsBackground(QFrame):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("⚡ Number Converter & 2's Complement")
-        self.setGeometry(300, 150, 550, 400)
+        self.setAutoFillBackground(True)
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.update_symbols)
+        self.timer.start(50)
 
-        self.main_layout = QVBoxLayout()
-        self.setLayout(self.main_layout)
+        self.symbols = ["0", "1", "+", "-", "=", "/", "*", "^"]
+        self.positions = [self.random_position() for _ in range(60)]
 
-        self.option_combo = QComboBox()
-        self.option_combo.addItems(["🔘 Choose Option", "🧮 Base Converter", "⚙️ 2's Complement"])
-        self.option_combo.currentIndexChanged.connect(self.switch_option)
-        self.main_layout.addWidget(self.option_combo)
+        # Neon cyberpunk colors for rain
+        self.colors = [
+            QColor(57, 255, 20),    # bright green
+            QColor(255, 20, 147),   # deep pink
+            QColor(0, 255, 255),    # cyan
+            QColor(255, 69, 0),     # orange red
+            QColor(138, 43, 226),   # blue violet
+            QColor(0, 191, 255),    # deep sky blue
+        ]
 
-        # Fancy stacked area
+        # Each symbol has its own color
+        self.symbol_colors = [random.choice(self.colors) for _ in self.positions]
+
+    def random_position(self):
+        return [random.randint(0, self.width()), random.randint(0, self.height()), random.choice(self.symbols)]
+
+    def update_symbols(self):
+        for i, pos in enumerate(self.positions):
+            pos[1] += 4  # speed of falling
+            if pos[1] > self.height():
+                pos[0] = random.randint(0, self.width())
+                pos[1] = 0
+                pos[2] = random.choice(self.symbols)
+                self.symbol_colors[i] = random.choice(self.colors)
+        self.update()
+
+    def resizeEvent(self, event):
+        self.positions = [self.random_position() for _ in range(60)]
+        self.symbol_colors = [random.choice(self.colors) for _ in self.positions]
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        font = QFont("Orbitron", 20, QFont.Bold)  # Bigger, bolder, cyberpunk font
+        painter.setFont(font)
+        for i, (x, y, char) in enumerate(self.positions):
+            painter.setPen(QPen(self.symbol_colors[i]))
+            painter.drawText(x, y, char)
+
+class DynamicConverterApp(QWidget):
+    def __init__(self):
+        super().__init__()
+
+        # Load Cyberpunk font (Orbitron) dynamically from file
+        font_id = QFontDatabase.addApplicationFont("fonts/Orbitron-Regular.ttf")
+        if font_id != -1:
+            families = QFontDatabase.applicationFontFamilies(font_id)
+            if families:
+                self.cyberpunk_font_family = families[0]
+            else:
+                self.cyberpunk_font_family = "Orbitron"
+        else:
+            self.cyberpunk_font_family = "Orbitron"  # fallback
+
+        self.setWindowTitle("Number Conversion Tool")
+        self.setGeometry(200, 100, 800, 400)
+
         self.stack = QStackedWidget()
-        self.stack.addWidget(QWidget())  # Placeholder
-        self.stack.addWidget(self.create_converter_panel())
-        self.stack.addWidget(self.create_twos_panel())
-        self.main_layout.addWidget(self.stack)
+        self.main_menu = self.create_main_menu()
+        self.base_panel = self.create_base_panel()
+        self.twos_panel = self.create_twos_panel()
 
-    def create_converter_panel(self):
-        panel = QWidget()
+        self.stack.addWidget(self.main_menu)
+        self.stack.addWidget(self.base_panel)
+        self.stack.addWidget(self.twos_panel)
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.stack)
+        self.setLayout(layout)
+
+        self.apply_dynamic_style()
+
+    def apply_dynamic_style(self):
+        self.setStyleSheet(f"""
+            QWidget {{
+                background-color: #0f0c29;
+                font-family: '{self.cyberpunk_font_family}', Courier, monospace;
+                color: white;
+            }}
+            QLineEdit, QPushButton {{
+                font-size: 18px;
+                padding: 10px;
+                border-radius: 6px;
+                font-family: '{self.cyberpunk_font_family}', Courier, monospace;
+            }}
+            QPushButton {{
+                background-color: #673AB7;
+                color: white;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{
+                background-color: #9575CD;
+            }}
+            QLabel {{
+                font-family: '{self.cyberpunk_font_family}', Courier, monospace;
+            }}
+        """)
+
+    def create_main_menu(self):
+        panel = MovingSymbolsBackground()
         layout = QVBoxLayout()
 
-        self.num_input = QLineEdit()
-        self.from_base = QLineEdit()
-        self.to_base = QLineEdit()
-        self.convert_result = QLabel("Result will appear here 🚀")
+        title = QLabel("Choose an Option")
+        title.setFont(QFont(self.cyberpunk_font_family, 22, QFont.Bold))
+        title.setAlignment(Qt.AlignCenter)
 
-        for field in [self.num_input, self.from_base, self.to_base]:
-            field.setPlaceholderText("Enter value...")
-            field.setStyleSheet("padding: 10px; font-size: 16px;")
+        btn_base = QPushButton("Base Converter")
+        btn_base.clicked.connect(lambda: self.stack.setCurrentWidget(self.base_panel))
 
-        convert_btn = QPushButton("🔁 Convert Base")
-        convert_btn.clicked.connect(self.run_base_converter)
+        btn_twos = QPushButton("2's Complement Calculator")
+        btn_twos.clicked.connect(lambda: self.stack.setCurrentWidget(self.twos_panel))
 
-        self.convert_result.setStyleSheet(
-            "padding: 12px; border: 2px solid #00BCD4; border-radius: 8px; background-color: #E0F7FA;"
-            "font-size: 16px; font-weight: bold; color: #006064;"
-        )
+        layout.addStretch()
+        layout.addWidget(title)
+        layout.addWidget(btn_base)
+        layout.addWidget(btn_twos)
+        layout.addStretch()
 
-        layout.addWidget(QLabel("🔢 Number:"))
-        layout.addWidget(self.num_input)
-        layout.addWidget(QLabel("📥 From Base:"))
-        layout.addWidget(self.from_base)
-        layout.addWidget(QLabel("📤 To Base:"))
-        layout.addWidget(self.to_base)
-        layout.addWidget(convert_btn)
-        layout.addWidget(self.convert_result)
+        panel.setLayout(layout)
+        return panel
+
+    def create_base_panel(self):
+        panel = MovingSymbolsBackground()
+        layout = QVBoxLayout()
+
+        title = QLabel("Base Converter")
+        title.setFont(QFont(self.cyberpunk_font_family, 18, QFont.Bold))
+
+        self.input_number = QLineEdit()
+        self.input_number.setPlaceholderText("Enter Number")
+
+        self.input_from = QLineEdit()
+        self.input_from.setPlaceholderText("From Base")
+
+        self.input_to = QLineEdit()
+        self.input_to.setPlaceholderText("To Base")
+
+        self.result_base = QLabel("Result will appear here")
+        self.result_base.setWordWrap(True)
+
+        btn = QPushButton("Convert")
+        btn.clicked.connect(self.run_base_conversion)
+
+        back_btn = QPushButton("Back")
+        back_btn.clicked.connect(lambda: self.stack.setCurrentWidget(self.main_menu))
+
+        layout.addWidget(title)
+        layout.addWidget(self.input_number)
+        layout.addWidget(self.input_from)
+        layout.addWidget(self.input_to)
+        layout.addWidget(btn)
+        layout.addWidget(self.result_base)
+        layout.addWidget(back_btn)
+
         panel.setLayout(layout)
         return panel
 
     def create_twos_panel(self):
-        panel = QWidget()
+        panel = MovingSymbolsBackground()
         layout = QVBoxLayout()
 
-        self.twos_input = QLineEdit()
-        self.twos_bits = QLineEdit()
-        self.twos_result = QLabel("2's complement will appear here 💡")
+        title = QLabel("2's Complement Calculator")
+        title.setFont(QFont(self.cyberpunk_font_family, 18, QFont.Bold))
 
-        for field in [self.twos_input, self.twos_bits]:
-            field.setPlaceholderText("Enter binary or bit length...")
-            field.setStyleSheet("padding: 10px; font-size: 16px;")
+        self.input_bin = QLineEdit()
+        self.input_bin.setPlaceholderText("Enter Binary Number")
 
-        run_btn = QPushButton("🧮 Calculate 2's Complement")
-        run_btn.clicked.connect(self.run_twos_complement)
+        self.input_k = QLineEdit()
+        self.input_k.setPlaceholderText("Number of Bits (k)")
 
-        self.twos_result.setStyleSheet(
-            "padding: 12px; border: 2px solid #FF5722; border-radius: 8px; background-color: #FFE0B2;"
-            "font-size: 16px; font-weight: bold; color: #BF360C;"
-        )
+        self.result_twos = QLabel("Result will appear here")
+        self.result_twos.setWordWrap(True)
 
-        layout.addWidget(QLabel("💻 Binary Number:"))
-        layout.addWidget(self.twos_input)
-        layout.addWidget(QLabel("📏 Number of Bits (k):"))
-        layout.addWidget(self.twos_bits)
-        layout.addWidget(run_btn)
-        layout.addWidget(self.twos_result)
+        btn = QPushButton("Calculate")
+        btn.clicked.connect(self.run_twos_complement)
+
+        back_btn = QPushButton("Back")
+        back_btn.clicked.connect(lambda: self.stack.setCurrentWidget(self.main_menu))
+
+        layout.addWidget(title)
+        layout.addWidget(self.input_bin)
+        layout.addWidget(self.input_k)
+        layout.addWidget(btn)
+        layout.addWidget(self.result_twos)
+        layout.addWidget(back_btn)
+
         panel.setLayout(layout)
         return panel
 
-    def switch_option(self, index):
-        self.stack.setCurrentIndex(index)
-
-    def run_base_converter(self):
+    def run_base_conversion(self):
         try:
-            num = self.num_input.text()
-            from_b = int(self.from_base.text())
-            to_b = int(self.to_base.text())
+            num = self.input_number.text()
+            from_b = int(self.input_from.text())
+            to_b = int(self.input_to.text())
             result = convert_between_bases(num, from_b, to_b)
-            self.convert_result.setText(f"✅ Result: {result}")
+            self.result_base.setText(f"Result: {result}")
         except Exception as e:
-            QMessageBox.critical(self, "Conversion Error", str(e))
+            self.result_base.setText(f"Error: {str(e)}")
 
     def run_twos_complement(self):
         try:
-            num = self.twos_input.text()
-            k = int(self.twos_bits.text())
+            num = self.input_bin.text()
+            k = int(self.input_k.text())
             result = two_complement(num, k)
-            self.twos_result.setText(f"✅ 2's Complement: {result}")
+            self.result_twos.setText(f"2's Complement: {result}")
         except Exception as e:
-            QMessageBox.critical(self, "2's Complement Error", str(e))
+            self.result_twos.setText(f"Error: {str(e)}")
 
-
-# === RUN ===
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    apply_stylesheet(app, theme='dark_teal.xml')  # <== super slick dark theme
-    window = ModernConverter()
+    window = DynamicConverterApp()
     window.show()
     sys.exit(app.exec_())

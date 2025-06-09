@@ -8,6 +8,7 @@ def decimal_to_base(num, base):
     return "".join(digits[::-1])
 
 def base_to_decimal(num_str, base):
+    num_str = str(num_str)
     if not num_str:
         return 0
     is_negative = num_str[0] == "-"
@@ -28,4 +29,4 @@ def convert_between_bases(num_str, from_base, to_base):
     decimal = base_to_decimal(num_str, from_base)
     return decimal_to_base(decimal, to_base)
 
-convert_between_bases(int(input('')))
+print(convert_between_bases(int(input('عدد مورد نظر را وارد کنید')),int(input('مبنای اولیه را وارد کنید')),int(input('مبنای ثانویه را وارد کنید'))))

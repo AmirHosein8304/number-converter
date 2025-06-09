@@ -4,7 +4,10 @@ def decimal_to_base(num, base):
         return "0"
     digits = []
     while num:
-        digits.append(str(num % base))
+        if num % base >= 10:
+            digits.append(chr(ord('A') + num % base - 10))
+        else:
+            digits.append(str(num % base))
         num //= base
     return "".join(digits[::-1])
 
@@ -35,4 +38,4 @@ def two_complement(num, k):
     result = 2**k - num
     return decimal_to_base(result, 2)
     
-print(two_complement(decimal_to_base(-6,2),4))
+print(two_complement(decimal_to_base(8,2),4))

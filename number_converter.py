@@ -1,4 +1,5 @@
 def decimal_to_base(num, base):
+    num = abs(num)
     if num == 0:
         return "0"
     digits = []
@@ -29,4 +30,9 @@ def convert_between_bases(num_str, from_base, to_base):
     decimal = base_to_decimal(num_str, from_base)
     return decimal_to_base(decimal, to_base)
 
-print(convert_between_bases(int(input('عدد مورد نظر را وارد کنید')),int(input('مبنای اولیه را وارد کنید')),int(input('مبنای ثانویه را وارد کنید'))))
+def two_complement(num, k):
+    num = base_to_decimal(num, 2)
+    result = 2**k - num
+    return decimal_to_base(result, 2)
+    
+print(two_complement(decimal_to_base(-6,2),4))

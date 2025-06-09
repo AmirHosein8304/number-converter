@@ -1,10 +1,14 @@
 import sys
 from PyQt5.QtWidgets import (
-    QApplication, QWidget, QLabel, QPushButton, QVBoxLayout, QHBoxLayout,
-    QComboBox, QLineEdit, QStackedWidget, QMessageBox
+    QApplication, QWidget, QLabel, QLineEdit, QPushButton,
+    QVBoxLayout, QHBoxLayout, QComboBox, QStackedWidget, QMessageBox, QFrame
 )
+from PyQt5.QtGui import QFont, QColor, QPalette
+from PyQt5.QtCore import QPropertyAnimation, QRect, QEasingCurve
+from qt_material import apply_stylesheet
 
-# Your original functions
+
+# ==== YOUR ORIGINAL LOGIC ====
 def decimal_to_base(num, base):
     num = abs(num)
     if num == 0:
@@ -45,100 +49,117 @@ def two_complement(num, k):
     result = 2**k - num
     return decimal_to_base(result, 2)
 
-# GUI Panel
-class ConverterApp(QWidget):
+
+# ==== MODERN STYLED GUI ====
+class ModernConverter(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Base Converter & 2's Complement Tool")
-        self.setGeometry(300, 200, 400, 250)
+        self.setWindowTitle("⚡ Number Converter & 2's Complement")
+        self.setGeometry(300, 150, 550, 400)
 
-        self.layout = QVBoxLayout()
+        self.main_layout = QVBoxLayout()
+        self.setLayout(self.main_layout)
 
-        # Dropdown to choose option
-        self.option_select = QComboBox()
-        self.option_select.addItems(["Select Option", "1: Base Converter", "2: 2's Complement"])
-        self.option_select.currentIndexChanged.connect(self.switch_panel)
-        self.layout.addWidget(self.option_select)
+        self.option_combo = QComboBox()
+        self.option_combo.addItems(["🔘 Choose Option", "🧮 Base Converter", "⚙️ 2's Complement"])
+        self.option_combo.currentIndexChanged.connect(self.switch_option)
+        self.main_layout.addWidget(self.option_combo)
 
-        # Panels
+        # Fancy stacked area
         self.stack = QStackedWidget()
-        self.stack.addWidget(QWidget())  # Empty placeholder
-        self.stack.addWidget(self.create_base_converter_panel())
-        self.stack.addWidget(self.create_twos_complement_panel())
-        self.layout.addWidget(self.stack)
+        self.stack.addWidget(QWidget())  # Placeholder
+        self.stack.addWidget(self.create_converter_panel())
+        self.stack.addWidget(self.create_twos_panel())
+        self.main_layout.addWidget(self.stack)
 
-        self.setLayout(self.layout)
-
-    def create_base_converter_panel(self):
+    def create_converter_panel(self):
         panel = QWidget()
         layout = QVBoxLayout()
 
-        self.input_num = QLineEdit()
+        self.num_input = QLineEdit()
         self.from_base = QLineEdit()
         self.to_base = QLineEdit()
-        self.result_base = QLabel("Result: ")
+        self.convert_result = QLabel("Result will appear here 🚀")
 
-        convert_btn = QPushButton("Convert")
+        for field in [self.num_input, self.from_base, self.to_base]:
+            field.setPlaceholderText("Enter value...")
+            field.setStyleSheet("padding: 10px; font-size: 16px;")
+
+        convert_btn = QPushButton("🔁 Convert Base")
         convert_btn.clicked.connect(self.run_base_converter)
 
-        layout.addWidget(QLabel("Number:"))
-        layout.addWidget(self.input_num)
-        layout.addWidget(QLabel("From Base:"))
+        self.convert_result.setStyleSheet(
+            "padding: 12px; border: 2px solid #00BCD4; border-radius: 8px; background-color: #E0F7FA;"
+            "font-size: 16px; font-weight: bold; color: #006064;"
+        )
+
+        layout.addWidget(QLabel("🔢 Number:"))
+        layout.addWidget(self.num_input)
+        layout.addWidget(QLabel("📥 From Base:"))
         layout.addWidget(self.from_base)
-        layout.addWidget(QLabel("To Base:"))
+        layout.addWidget(QLabel("📤 To Base:"))
         layout.addWidget(self.to_base)
         layout.addWidget(convert_btn)
-        layout.addWidget(self.result_base)
-
+        layout.addWidget(self.convert_result)
         panel.setLayout(layout)
         return panel
 
-    def create_twos_complement_panel(self):
+    def create_twos_panel(self):
         panel = QWidget()
         layout = QVBoxLayout()
 
-        self.input_twos = QLineEdit()
-        self.input_bits = QLineEdit()
-        self.result_twos = QLabel("Result: ")
+        self.twos_input = QLineEdit()
+        self.twos_bits = QLineEdit()
+        self.twos_result = QLabel("2's complement will appear here 💡")
 
-        calc_btn = QPushButton("Calculate")
-        calc_btn.clicked.connect(self.run_twos_complement)
+        for field in [self.twos_input, self.twos_bits]:
+            field.setPlaceholderText("Enter binary or bit length...")
+            field.setStyleSheet("padding: 10px; font-size: 16px;")
 
-        layout.addWidget(QLabel("Binary Number:"))
-        layout.addWidget(self.input_twos)
-        layout.addWidget(QLabel("Number of Bits (k):"))
-        layout.addWidget(self.input_bits)
-        layout.addWidget(calc_btn)
-        layout.addWidget(self.result_twos)
+        run_btn = QPushButton("🧮 Calculate 2's Complement")
+        run_btn.clicked.connect(self.run_twos_complement)
 
+        self.twos_result.setStyleSheet(
+            "padding: 12px; border: 2px solid #FF5722; border-radius: 8px; background-color: #FFE0B2;"
+            "font-size: 16px; font-weight: bold; color: #BF360C;"
+        )
+
+        layout.addWidget(QLabel("💻 Binary Number:"))
+        layout.addWidget(self.twos_input)
+        layout.addWidget(QLabel("📏 Number of Bits (k):"))
+        layout.addWidget(self.twos_bits)
+        layout.addWidget(run_btn)
+        layout.addWidget(self.twos_result)
         panel.setLayout(layout)
         return panel
 
-    def switch_panel(self, index):
+    def switch_option(self, index):
         self.stack.setCurrentIndex(index)
 
     def run_base_converter(self):
         try:
-            num = self.input_num.text()
+            num = self.num_input.text()
             from_b = int(self.from_base.text())
             to_b = int(self.to_base.text())
             result = convert_between_bases(num, from_b, to_b)
-            self.result_base.setText(f"Result: {result}")
+            self.convert_result.setText(f"✅ Result: {result}")
         except Exception as e:
-            QMessageBox.critical(self, "Error", str(e))
+            QMessageBox.critical(self, "Conversion Error", str(e))
 
     def run_twos_complement(self):
         try:
-            num = self.input_twos.text()
-            k = int(self.input_bits.text())
+            num = self.twos_input.text()
+            k = int(self.twos_bits.text())
             result = two_complement(num, k)
-            self.result_twos.setText(f"Result: {result}")
+            self.twos_result.setText(f"✅ 2's Complement: {result}")
         except Exception as e:
-            QMessageBox.critical(self, "Error", str(e))
+            QMessageBox.critical(self, "2's Complement Error", str(e))
 
-# Run the app
+
+# === RUN ===
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = ConverterApp()
+    apply_stylesheet(app, theme='dark_teal.xml')  # <== super slick dark theme
+    window = ModernConverter()
     window.show()
     sys.exit(app.exec_())

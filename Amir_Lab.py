@@ -2,14 +2,14 @@ import sys
 import random
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QLabel, QPushButton, QLineEdit,
-    QVBoxLayout, QStackedWidget, QFrame
+    QVBoxLayout, QStackedWidget, QFrame, QCheckBox
 )
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QPalette, QColor, QFont, QPainter, QPen, QFontDatabase
 
-# === Your Original Logic (unchanged) ===
+# === Conversion Functions ===
 def decimal_to_base(num, base):
-    num = abs(num)
+    num = abs(int(num))
     if num == 0:
         return "0"
     digits = []
@@ -48,7 +48,7 @@ def two_complement(num, k):
     result = 2**k - num
     return decimal_to_base(result, 2)
 
-# === Moving Symbol Background with multi-color rain ===
+# === Background Rain ===
 class MovingSymbolsBackground(QFrame):
     def __init__(self):
         super().__init__()
@@ -57,20 +57,13 @@ class MovingSymbolsBackground(QFrame):
         self.timer.timeout.connect(self.update_symbols)
         self.timer.start(50)
 
-        self.symbols = ["0", "1", "+", "-", "=", "/", "*", "^"]
+        self.symbols = ["%","&","8","0", "1", "+", "-", "=", "/", "*", "^"]
         self.positions = [self.random_position() for _ in range(60)]
-
-        # Neon cyberpunk colors for rain
         self.colors = [
-            QColor(57, 255, 20),    # bright green
-            QColor(255, 20, 147),   # deep pink
-            QColor(0, 255, 255),    # cyan
-            QColor(255, 69, 0),     # orange red
-            QColor(138, 43, 226),   # blue violet
-            QColor(0, 191, 255),    # deep sky blue
+            QColor(57, 255, 20), QColor(255, 20, 147),
+            QColor(0, 255, 255), QColor(255, 69, 0),
+            QColor(138, 43, 226), QColor(0, 191, 255)
         ]
-
-        # Each symbol has its own color
         self.symbol_colors = [random.choice(self.colors) for _ in self.positions]
 
     def random_position(self):
@@ -78,7 +71,7 @@ class MovingSymbolsBackground(QFrame):
 
     def update_symbols(self):
         for i, pos in enumerate(self.positions):
-            pos[1] += 4  # speed of falling
+            pos[1] += 4
             if pos[1] > self.height():
                 pos[0] = random.randint(0, self.width())
                 pos[1] = 0
@@ -92,26 +85,19 @@ class MovingSymbolsBackground(QFrame):
 
     def paintEvent(self, event):
         painter = QPainter(self)
-        font = QFont("Orbitron", 20, QFont.Bold)  # Bigger, bolder, cyberpunk font
+        font = QFont("Orbitron", 20, QFont.Bold)
         painter.setFont(font)
         for i, (x, y, char) in enumerate(self.positions):
             painter.setPen(QPen(self.symbol_colors[i]))
             painter.drawText(x, y, char)
 
+# === Main App ===
 class DynamicConverterApp(QWidget):
     def __init__(self):
         super().__init__()
 
-        # Load Cyberpunk font (Orbitron) dynamically from file
         font_id = QFontDatabase.addApplicationFont("fonts/Orbitron-Regular.ttf")
-        if font_id != -1:
-            families = QFontDatabase.applicationFontFamilies(font_id)
-            if families:
-                self.cyberpunk_font_family = families[0]
-            else:
-                self.cyberpunk_font_family = "Orbitron"
-        else:
-            self.cyberpunk_font_family = "Orbitron"  # fallback
+        self.cyberpunk_font_family = QFontDatabase.applicationFontFamilies(font_id)[0] if font_id != -1 else "Orbitron"
 
         self.setWindowTitle("Number Conversion Tool")
         self.setGeometry(200, 100, 800, 400)
@@ -196,6 +182,16 @@ class DynamicConverterApp(QWidget):
         self.input_to = QLineEdit()
         self.input_to.setPlaceholderText("To Base")
 
+        # Checkboxes
+        self.checkbox_signed = QCheckBox("Is your number signed?")
+        self.checkbox_decimal = QCheckBox("Is your number decimal?")
+        self.checkbox_decimal.stateChanged.connect(self.toggle_decimal_digits_input)
+
+        # Decimal digits input
+        self.input_decimal_digits = QLineEdit()
+        self.input_decimal_digits.setPlaceholderText("Digits after decimal")
+        self.input_decimal_digits.setVisible(False)
+
         self.result_base = QLabel("Result will appear here")
         self.result_base.setWordWrap(True)
 
@@ -209,12 +205,62 @@ class DynamicConverterApp(QWidget):
         layout.addWidget(self.input_number)
         layout.addWidget(self.input_from)
         layout.addWidget(self.input_to)
+        layout.addWidget(self.checkbox_signed)
+        layout.addWidget(self.checkbox_decimal)
+        layout.addWidget(self.input_decimal_digits)
         layout.addWidget(btn)
         layout.addWidget(self.result_base)
         layout.addWidget(back_btn)
 
         panel.setLayout(layout)
         return panel
+
+    def toggle_decimal_digits_input(self, state):
+        self.input_decimal_digits.setVisible(state == Qt.Checked)
+
+    def run_base_conversion(self):
+        try:
+            num_str = self.input_number.text()
+            from_b = int(self.input_from.text())
+            to_b = int(self.input_to.text())
+
+            is_signed = self.checkbox_signed.isChecked()
+            is_decimal = self.checkbox_decimal.isChecked()
+
+            if not is_signed and num_str.startswith("-"):
+                raise ValueError("Sign not allowed but number is negative.")
+
+            if is_decimal:
+                digits_after = int(self.input_decimal_digits.text())
+                if "." in num_str:
+                    whole, frac = num_str.split(".")
+                    dec_value = int(whole, from_b)
+                    frac_value = sum(
+                        int(ch, from_b) * (from_b ** -(i + 1))
+                        for i, ch in enumerate(frac)
+                    )
+                    final_decimal = dec_value + frac_value
+                else:
+                    final_decimal = int(num_str, from_b)
+
+                int_part = int(final_decimal)
+                frac_part = final_decimal - int_part
+                converted_int = decimal_to_base(int_part, to_b)
+
+                result = converted_int
+                if frac_part > 0:
+                    result += "."
+                    for _ in range(digits_after):
+                        frac_part *= to_b
+                        digit = int(frac_part)
+                        result += decimal_to_base(digit, to_b)
+                        frac_part -= digit
+            else:
+                result = convert_between_bases(num_str, from_b, to_b)
+
+            self.result_base.setText(f"Result: {result}")
+        except Exception as e:
+            self.result_base.setText(f"Error: {str(e)}")
 
     def create_twos_panel(self):
         panel = MovingSymbolsBackground()
@@ -248,16 +294,6 @@ class DynamicConverterApp(QWidget):
         panel.setLayout(layout)
         return panel
 
-    def run_base_conversion(self):
-        try:
-            num = self.input_number.text()
-            from_b = int(self.input_from.text())
-            to_b = int(self.input_to.text())
-            result = convert_between_bases(num, from_b, to_b)
-            self.result_base.setText(f"Result: {result}")
-        except Exception as e:
-            self.result_base.setText(f"Error: {str(e)}")
-
     def run_twos_complement(self):
         try:
             num = self.input_bin.text()
@@ -267,6 +303,7 @@ class DynamicConverterApp(QWidget):
         except Exception as e:
             self.result_twos.setText(f"Error: {str(e)}")
 
+# === App Execution ===
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = DynamicConverterApp()

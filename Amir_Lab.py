@@ -10,6 +10,8 @@ from PyQt5.QtGui import QPalette, QColor, QFont, QPainter, QPen, QFontDatabase
 
 # === Your Logic (with Overflow Check) ===
 def decimal_to_base(num, base, k, d=0):
+    if k==0:
+        k = int(log(num,base)) + 1
     if k < d:
         return "Overflow!"
     f = False
@@ -64,9 +66,9 @@ def base_to_decimal(num_str, base, k, d=0):
         decimal += value * base ** (k - d - i - 1)
     return decimal
 
-def convert_between_bases(num_str, from_base, to_base, k1, k2, d1=0, d2=0):
-    decimal = base_to_decimal(num_str, from_base, k1, d1)
-    return decimal_to_base(decimal, to_base, k2, d2)
+def convert_between_bases(num_str, from_base, to_base, k, d1=0, d2=0):
+    decimal = base_to_decimal(num_str, from_base, len(str(num_str)), d1)
+    return decimal_to_base(decimal, to_base, k, d2)
 
 def two_complement(num, k):
     # This function expects a binary string input
@@ -323,5 +325,3 @@ if __name__ == "__main__":
     window = DynamicConverterApp()
     window.show()
     sys.exit(app.exec_())
-"""
-print(convert_between_bases(1022,3,2,7))

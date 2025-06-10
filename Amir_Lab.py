@@ -1,3 +1,4 @@
+from math import log
 import sys
 import random
 from PyQt5.QtWidgets import (
@@ -7,21 +8,35 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QPalette, QColor, QFont, QPainter, QPen, QFontDatabase
 
-# === Conversion Functions ===
-def decimal_to_base(num, base):
-    num = abs(int(num))
+# === Your Logic (with Overflow Check) ===
+def decimal_to_base(num, base, k, d=0):
+    if num < 0:
+        # Handling negative numbers wasn't fully defined for general bases,
+        # so we'll treat them based on their magnitude.
+        # The two_complement function is specific to base 2.
+        num = abs(num)
     if num == 0:
-        return "0"
-    digits = []
-    while num:
-        if num % base >= 10:
-            digits.append(chr(ord('A') + num % base - 10))
-        else:
-            digits.append(str(num % base))
-        num //= base
-    return "".join(digits[::-1])
+        return "0".zfill(k) if k > 0 else "0"
+        
+    # Pre-calculate required digits to detect potential overflow in the logic below
+    if num > 0 and int(log(num, base)) >= k:
+        return "Overflow"
 
-def base_to_decimal(num_str, base):
+    digits = ['0'] * k
+    temp_num = num
+    while temp_num > 0:
+        power = int(log(temp_num, base))
+        if k - 1 - power < 0:
+            # This condition indicates the number is too large for k bits
+            return "Overflow"
+        
+        digit_value = temp_num // (base ** power)
+        digits[k - 1 - power] = str(digit_value) if digit_value < 10 else chr(ord('A') + digit_value - 10)
+        temp_num %= (base ** power)
+        
+    return "".join(map(str, digits))
+
+def base_to_decimal(num_str, base, k=0, d=0): # k is not used here but kept for signature consistency
     num_str = str(num_str)
     if not num_str:
         return 0
@@ -39,16 +54,29 @@ def base_to_decimal(num_str, base):
         decimal = decimal * base + value
     return -decimal if is_negative else decimal
 
-def convert_between_bases(num_str, from_base, to_base):
+# MODIFIED: Added an explicit overflow check before conversion
+def convert_between_bases(num_str, from_base, to_base, k, d=0):
     decimal = base_to_decimal(num_str, from_base)
-    return decimal_to_base(decimal, to_base)
+    
+    # --- OVERFLOW CHECK ---
+    # The largest unsigned number that can be represented with k digits in to_base is (to_base^k) - 1.
+    # If the decimal value is greater than or equal to to_base^k, it's an overflow.
+    if k > 0 and decimal >= (to_base ** k):
+        return "Overflow"
+
+    return decimal_to_base(decimal, to_base, k)
 
 def two_complement(num, k):
-    num = base_to_decimal(num, 2)
-    result = 2**k - num
-    return decimal_to_base(result, 2)
+    # This function expects a binary string input
+    decimal_val = base_to_decimal(num, 2)
+    if decimal_val >= 2**k:
+        return "Overflow" # Can't take complement of number that already exceeds k bits
+    
+    # Standard 2's complement calculation for a positive number
+    result = 2**k - decimal_val
+    return decimal_to_base(result, 2, k)
 
-# === Background Rain ===
+# === Background Rain (unchanged) ===
 class MovingSymbolsBackground(QFrame):
     def __init__(self):
         super().__init__()
@@ -60,9 +88,9 @@ class MovingSymbolsBackground(QFrame):
         self.symbols = ["%","&","8","0", "1", "+", "-", "=", "/", "*", "^"]
         self.positions = [self.random_position() for _ in range(60)]
         self.colors = [
-            QColor(57, 255, 20), QColor(255, 20, 147),
-            QColor(0, 255, 255), QColor(255, 69, 0),
-            QColor(138, 43, 226), QColor(0, 191, 255)
+            QColor(57, 255, 20), QColor(255, 20, 147), QColor(0, 255, 255),
+            QColor(255, 69, 0), QColor(138, 43, 226), QColor(0, 191, 255),
+            QColor(255, 255, 0), QColor(255, 0, 255), QColor(240, 230, 140)
         ]
         self.symbol_colors = [random.choice(self.colors) for _ in self.positions]
 
@@ -91,113 +119,80 @@ class MovingSymbolsBackground(QFrame):
             painter.setPen(QPen(self.symbol_colors[i]))
             painter.drawText(x, y, char)
 
-# === Main App ===
+# === Main App (GUI updated) ===
 class DynamicConverterApp(QWidget):
     def __init__(self):
         super().__init__()
-
         font_id = QFontDatabase.addApplicationFont("fonts/Orbitron-Regular.ttf")
         self.cyberpunk_font_family = QFontDatabase.applicationFontFamilies(font_id)[0] if font_id != -1 else "Orbitron"
-
         self.setWindowTitle("Number Conversion Tool")
         self.setGeometry(200, 100, 800, 400)
-
         self.stack = QStackedWidget()
         self.main_menu = self.create_main_menu()
         self.base_panel = self.create_base_panel()
         self.twos_panel = self.create_twos_panel()
-
         self.stack.addWidget(self.main_menu)
         self.stack.addWidget(self.base_panel)
         self.stack.addWidget(self.twos_panel)
-
         layout = QVBoxLayout()
         layout.addWidget(self.stack)
         self.setLayout(layout)
-
         self.apply_dynamic_style()
 
     def apply_dynamic_style(self):
         self.setStyleSheet(f"""
-            QWidget {{
-                background-color: #0f0c29;
-                font-family: '{self.cyberpunk_font_family}', Courier, monospace;
-                color: white;
-            }}
-            QLineEdit, QPushButton {{
-                font-size: 18px;
-                padding: 10px;
-                border-radius: 6px;
-                font-family: '{self.cyberpunk_font_family}', Courier, monospace;
-            }}
-            QPushButton {{
-                background-color: #673AB7;
-                color: white;
-                font-weight: bold;
-            }}
-            QPushButton:hover {{
-                background-color: #9575CD;
-            }}
-            QLabel {{
-                font-family: '{self.cyberpunk_font_family}', Courier, monospace;
-            }}
+            QWidget {{ background-color: #0f0c29; font-family: '{self.cyberpunk_font_family}', Courier, monospace; color: white; }}
+            QLineEdit, QPushButton {{ font-size: 18px; padding: 10px; border-radius: 6px; font-family: '{self.cyberpunk_font_family}', Courier, monospace; }}
+            QPushButton {{ background-color: #673AB7; color: white; font-weight: bold; }}
+            QPushButton:hover {{ background-color: #9575CD; }}
+            QLabel {{ font-family: '{self.cyberpunk_font_family}', Courier, monospace; }}
         """)
 
     def create_main_menu(self):
         panel = MovingSymbolsBackground()
         layout = QVBoxLayout()
-
         title = QLabel("Choose an Option")
         title.setFont(QFont(self.cyberpunk_font_family, 22, QFont.Bold))
         title.setAlignment(Qt.AlignCenter)
-
         btn_base = QPushButton("Base Converter")
         btn_base.clicked.connect(lambda: self.stack.setCurrentWidget(self.base_panel))
-
         btn_twos = QPushButton("2's Complement Calculator")
         btn_twos.clicked.connect(lambda: self.stack.setCurrentWidget(self.twos_panel))
-
         layout.addStretch()
         layout.addWidget(title)
         layout.addWidget(btn_base)
         layout.addWidget(btn_twos)
         layout.addStretch()
-
         panel.setLayout(layout)
         return panel
 
     def create_base_panel(self):
         panel = MovingSymbolsBackground()
         layout = QVBoxLayout()
-
         title = QLabel("Base Converter")
         title.setFont(QFont(self.cyberpunk_font_family, 18, QFont.Bold))
-
         self.input_number = QLineEdit()
         self.input_number.setPlaceholderText("Enter Number")
-
         self.input_from = QLineEdit()
         self.input_from.setPlaceholderText("From Base")
-
         self.input_to = QLineEdit()
         self.input_to.setPlaceholderText("To Base")
 
-        # Checkboxes
+        # --- NEW WIDGET ---
+        # Added a QLineEdit for the user to input the number of bits (k).
+        self.input_k_base = QLineEdit()
+        self.input_k_base.setPlaceholderText("Number of Bits (k) - Optional")
+
         self.checkbox_signed = QCheckBox("Is your number signed?")
         self.checkbox_decimal = QCheckBox("Is your number decimal?")
         self.checkbox_decimal.stateChanged.connect(self.toggle_decimal_digits_input)
-
-        # Decimal digits input
         self.input_decimal_digits = QLineEdit()
         self.input_decimal_digits.setPlaceholderText("Digits after decimal")
         self.input_decimal_digits.setVisible(False)
-
         self.result_base = QLabel("Result will appear here")
         self.result_base.setWordWrap(True)
-
         btn = QPushButton("Convert")
         btn.clicked.connect(self.run_base_conversion)
-
         back_btn = QPushButton("Back")
         back_btn.clicked.connect(lambda: self.stack.setCurrentWidget(self.main_menu))
 
@@ -205,47 +200,59 @@ class DynamicConverterApp(QWidget):
         layout.addWidget(self.input_number)
         layout.addWidget(self.input_from)
         layout.addWidget(self.input_to)
+        # --- ADDED WIDGET TO LAYOUT ---
+        layout.addWidget(self.input_k_base)
         layout.addWidget(self.checkbox_signed)
         layout.addWidget(self.checkbox_decimal)
         layout.addWidget(self.input_decimal_digits)
         layout.addWidget(btn)
         layout.addWidget(self.result_base)
         layout.addWidget(back_btn)
-
         panel.setLayout(layout)
         return panel
 
     def toggle_decimal_digits_input(self, state):
         self.input_decimal_digits.setVisible(state == Qt.Checked)
 
+    # MODIFIED: Logic to get K and handle the "Overflow" return string.
     def run_base_conversion(self):
         try:
             num_str = self.input_number.text()
             from_b = int(self.input_from.text())
             to_b = int(self.input_to.text())
+            
+            # Get k from the new input field. Default to 0 if empty.
+            k_text = self.input_k_base.text()
+            k = int(k_text) if k_text else 0
 
             is_signed = self.checkbox_signed.isChecked()
             is_decimal = self.checkbox_decimal.isChecked()
 
             if not is_signed and num_str.startswith("-"):
-                raise ValueError("Sign not allowed but number is negative.")
+                raise ValueError("Sign not allowed for unsigned number.")
 
+            # This part for decimal/fractional numbers remains unchanged
             if is_decimal:
+                # (Your existing logic for fractional numbers)
                 digits_after = int(self.input_decimal_digits.text())
                 if "." in num_str:
                     whole, frac = num_str.split(".")
-                    dec_value = int(whole, from_b)
+                    dec_value = base_to_decimal(whole, from_b)
                     frac_value = sum(
-                        int(ch, from_b) * (from_b ** -(i + 1))
+                        base_to_decimal(ch, from_b) * (from_b ** -(i + 1))
                         for i, ch in enumerate(frac)
                     )
                     final_decimal = dec_value + frac_value
                 else:
-                    final_decimal = int(num_str, from_b)
+                    final_decimal = base_to_decimal(num_str, from_b)
 
                 int_part = int(final_decimal)
                 frac_part = final_decimal - int_part
-                converted_int = decimal_to_base(int_part, to_b)
+                
+                # Pass k to the integer part conversion
+                converted_int = decimal_to_base(int_part, to_b, k)
+                if converted_int == "Overflow":
+                    raise ValueError("Overflow in integer part")
 
                 result = converted_int
                 if frac_part > 0:
@@ -253,53 +260,58 @@ class DynamicConverterApp(QWidget):
                     for _ in range(digits_after):
                         frac_part *= to_b
                         digit = int(frac_part)
-                        result += decimal_to_base(digit, to_b)
+                        result += decimal_to_base(digit, to_b, 0) # k=0 for single digits
                         frac_part -= digit
             else:
-                result = convert_between_bases(num_str, from_b, to_b)
+                # Pass k to the main conversion function
+                result = convert_between_bases(num_str, from_b, to_b, k)
 
-            self.result_base.setText(f"Result: {result}")
+            # --- DISPLAY OVERFLOW ---
+            # Check if the function returned the specific "Overflow" error string.
+            if result == "Overflow":
+                self.result_base.setText("Error: Overflow")
+            else:
+                self.result_base.setText(f"Result: {result}")
         except Exception as e:
             self.result_base.setText(f"Error: {str(e)}")
+
 
     def create_twos_panel(self):
         panel = MovingSymbolsBackground()
         layout = QVBoxLayout()
-
         title = QLabel("2's Complement Calculator")
         title.setFont(QFont(self.cyberpunk_font_family, 18, QFont.Bold))
-
         self.input_bin = QLineEdit()
         self.input_bin.setPlaceholderText("Enter Binary Number")
-
         self.input_k = QLineEdit()
         self.input_k.setPlaceholderText("Number of Bits (k)")
-
         self.result_twos = QLabel("Result will appear here")
         self.result_twos.setWordWrap(True)
-
         btn = QPushButton("Calculate")
         btn.clicked.connect(self.run_twos_complement)
-
         back_btn = QPushButton("Back")
         back_btn.clicked.connect(lambda: self.stack.setCurrentWidget(self.main_menu))
-
         layout.addWidget(title)
         layout.addWidget(self.input_bin)
         layout.addWidget(self.input_k)
         layout.addWidget(btn)
         layout.addWidget(self.result_twos)
         layout.addWidget(back_btn)
-
         panel.setLayout(layout)
         return panel
 
+    # MODIFIED: To handle overflow from the logic function
     def run_twos_complement(self):
         try:
             num = self.input_bin.text()
             k = int(self.input_k.text())
             result = two_complement(num, k)
-            self.result_twos.setText(f"2's Complement: {result}")
+
+            if result == "Overflow":
+                self.result_twos.setText("Error: Overflow")
+            else:
+                self.result_twos.setText(f"2's Complement: {result}")
+
         except Exception as e:
             self.result_twos.setText(f"Error: {str(e)}")
 

@@ -1,3 +1,4 @@
+from math import log
 import sys
 import random
 from PyQt5.QtWidgets import (
@@ -8,20 +9,23 @@ from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QPalette, QColor, QFont, QPainter, QPen, QFontDatabase
 
 # === Your Original Logic (unchanged) ===
-def decimal_to_base(num, base):
-    num = abs(num)
+def decimal_to_base(num, base, k, d=0):
+    if num <= 0:
+        num = two_complement(abs(num), k)
     if num == 0:
         return "0"
-    digits = []
-    while num:
-        if num % base >= 10:
+    digits = [0] * k
+    while num >= 1:
+        '''if num % base >= 10:
             digits.append(chr(ord('A') + num % base - 10))
         else:
             digits.append(str(num % base))
-        num //= base
-    return "".join(digits[::-1])
+        num //= base'''
+        digits[k - 1 - int(log(num, base))] = num // (base ** int(log(num, base)))
+        num = num % (base ** int(log(num, base)))
+    return "".join(map(str, digits))
 
-def base_to_decimal(num_str, base):
+def base_to_decimal(num_str, base, k, d=0):
     num_str = str(num_str)
     if not num_str:
         return 0
@@ -39,9 +43,9 @@ def base_to_decimal(num_str, base):
         decimal = decimal * base + value
     return -decimal if is_negative else decimal
 
-def convert_between_bases(num_str, from_base, to_base):
-    decimal = base_to_decimal(num_str, from_base)
-    return decimal_to_base(decimal, to_base)
+def convert_between_bases(num_str, from_base, to_base, k, d=0):
+    decimal = base_to_decimal(num_str, from_base, k)
+    return decimal_to_base(decimal, to_base, k)
 
 def two_complement(num, k):
     num = base_to_decimal(num, 2)
@@ -62,12 +66,15 @@ class MovingSymbolsBackground(QFrame):
 
         # Neon cyberpunk colors for rain
         self.colors = [
-            QColor(57, 255, 20),    # bright green
-            QColor(255, 20, 147),   # deep pink
-            QColor(0, 255, 255),    # cyan
-            QColor(255, 69, 0),     # orange red
-            QColor(138, 43, 226),   # blue violet
-            QColor(0, 191, 255),    # deep sky blue
+            QColor(57, 255, 20),
+            QColor(255, 20, 147),
+            QColor(0, 255, 255),
+            QColor(255, 69, 0),
+            QColor(138, 43, 226),
+            QColor(0, 191, 255),
+            QColor(255, 255, 0),
+            QColor(255, 0, 255),
+            QColor(240, 230, 140)
         ]
 
         # Each symbol has its own color
@@ -267,8 +274,10 @@ class DynamicConverterApp(QWidget):
         except Exception as e:
             self.result_twos.setText(f"Error: {str(e)}")
 
-if __name__ == "__main__":
+"""if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = DynamicConverterApp()
     window.show()
     sys.exit(app.exec_())
+"""
+print(convert_between_bases(1022,3,2,7))

@@ -10,42 +10,63 @@ from PyQt5.QtGui import QPalette, QColor, QFont, QPainter, QPen, QFontDatabase
 
 # === Your Original Logic (unchanged) ===
 def decimal_to_base(num, base, k, d=0):
+    if k < d:
+        return "Overflow!"
+    f = False
+    if num % 1 != 0:
+        f = True
     if num <= 0:
         num = two_complement(abs(num), k)
     if num == 0:
         return "0"
-    digits = [0] * k
+    if not f:
+        digits = [0] * k
+    else:
+        digits = [0] * (k - d)
     while num >= 1:
-        '''if num % base >= 10:
-            digits.append(chr(ord('A') + num % base - 10))
-        else:
-            digits.append(str(num % base))
-        num //= base'''
-        digits[k - 1 - int(log(num, base))] = num // (base ** int(log(num, base)))
-        num = num % (base ** int(log(num, base)))
+        try:
+            digits[k - d - 1 - int(log(num, base))] = int(num // (base ** int(log(num, base))))
+            num = num % (base ** int(log(num, base)))
+        except IndexError:
+            return "Overflow!"
+    if num:
+        f_digits = [0] * d
+        for i in range(d):
+            if num == 0:
+                break
+            f_digits[abs(int(log(num, base))) - 1] = int(num // (base ** int(log(num, base))))
+            num = num % (base ** int(log(num, base)))
+        digits.extend(f_digits)
+    
     return "".join(map(str, digits))
 
 def base_to_decimal(num_str, base, k, d=0):
-    num_str = str(num_str)
+    num_str = list(str(num_str))
     if not num_str:
         return 0
-    is_negative = num_str[0] == "-"
-    if is_negative:
-        num_str = num_str[1:]
     decimal = 0
-    for digit in num_str:
-        if digit.isdigit():
-            value = int(digit)
+    if d:
+        f_digits = num_str[k-d:k]
+        num_str = num_str[:k-d]
+        for i in range(d):
+            if f_digits[i].isdigit():
+                value = int(f_digits[i])
+            else:
+                value = ord(f_digits[i].upper()) - ord('A') + 10
+            decimal += value * base **(-i-1)
+    for i in range(k-d):
+        if num_str[i].isdigit():
+            value = int(num_str[i])
         else:
-            value = ord(digit.upper()) - ord('A') + 10
+            value = ord(num_str[i].upper()) - ord('A') + 10
         if value >= base:
-            raise ValueError(f"Invalid digit {digit} for base {base}")
-        decimal = decimal * base + value
-    return -decimal if is_negative else decimal
+            raise ValueError(f"Invalid digit {num_str[i]} for base {base}")
+        decimal += value * base ** (k - d - i - 1)
+    return decimal
 
-def convert_between_bases(num_str, from_base, to_base, k, d=0):
-    decimal = base_to_decimal(num_str, from_base, k)
-    return decimal_to_base(decimal, to_base, k)
+def convert_between_bases(num_str, from_base, to_base, k1, k2, d1=0, d2=0):
+    decimal = base_to_decimal(num_str, from_base, k1, d1)
+    return decimal_to_base(decimal, to_base, k2, d2)
 
 def two_complement(num, k):
     num = base_to_decimal(num, 2)
@@ -274,10 +295,10 @@ class DynamicConverterApp(QWidget):
         except Exception as e:
             self.result_twos.setText(f"Error: {str(e)}")
 
-"""if __name__ == "__main__":
+'''if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = DynamicConverterApp()
     window.show()
     sys.exit(app.exec_())
-"""
-print(convert_between_bases(1022,3,2,7))
+'''
+print(convert_between_bases(101001,2,4,6,3,2,1))

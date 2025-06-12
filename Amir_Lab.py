@@ -269,7 +269,7 @@ class DynamicConverterApp(QWidget):
                         frac_part -= digit
             else:
                 # Pass k to the main conversion function
-                result = convert_between_bases(num_str, from_b, to_b, k)
+                result = convert_between_bases(num_str, from_b, to_b, k, u=is_signed)
 
             # --- DISPLAY OVERFLOW ---
             # Check if the function returned the specific "Overflow" error string.

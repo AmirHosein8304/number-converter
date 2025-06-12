@@ -9,7 +9,7 @@ from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QPalette, QColor, QFont, QPainter, QPen, QFontDatabase
 
 # === Your Logic (with Overflow Check) ===
-def decimal_to_base(num, base, k=None, d=0):
+def decimal_to_base(num, base, k=None, d=0, u=False):
     if k==0:
         k = int(log(num,base)) + 1
     if k < d:
@@ -70,7 +70,7 @@ def base_to_decimal(num_str, base, k=None, d=0,u=False):
         decimal -= 2**k
     return decimal
 
-def convert_between_bases(num_str, from_base, to_base, k, d1=0, d2=0):
+def convert_between_bases(num_str, from_base, to_base, k, d1=0, d2=0, u=False):
     decimal = base_to_decimal(num_str, from_base, len(str(num_str)), d1)
     return decimal_to_base(decimal, to_base, k, d2)
 

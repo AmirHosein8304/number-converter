@@ -71,8 +71,8 @@ def base_to_decimal(num_str, base, k=None, d=0,u=False):
     return decimal
 
 def convert_between_bases(num_str, from_base, to_base, k, d1=0, d2=0, u=False):
-    decimal = base_to_decimal(num_str, from_base, len(str(num_str)), d1, u)
-    return decimal_to_base(decimal, to_base, k, d2, u)
+    decimal = base_to_decimal(num_str, from_base, len(str(num_str)), d1, u) if from_base != 10 else num_str
+    return decimal_to_base(decimal, to_base, k, d2, u) if (to_base != 10 and decimal != "Overflow!") else decimal
 
 def two_complement(num, k):
     # This function expects a binary string input

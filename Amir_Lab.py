@@ -11,7 +11,7 @@ from PyQt5.QtGui import QPalette, QColor, QFont, QPainter, QPen, QFontDatabase
 # === Your Logic (with Overflow Check) ===
 def decimal_to_base(num, base, k=None, d=0, u=False):
     if u and num <= 0:
-        num = two_complement(abs(num), k)
+        num = two_complement(decimal_to_base(abs(num),2,k), k, True)
     if k==0:
         k = int(log(num,base)) + 1
     if k < d:
@@ -74,14 +74,11 @@ def convert_between_bases(num_str, from_base, to_base, k, d1=0, d2=0, u=False):
     decimal = base_to_decimal(num_str, from_base, len(str(num_str)), d1, u) if from_base != 10 else num_str
     return decimal_to_base(decimal, to_base, k, d2, u) if (to_base != 10 and decimal != "Overflow!") else decimal
 
-def two_complement(num, k):
-    # This function expects a binary string input
+def two_complement(num, k , n=False):
     decimal_val = base_to_decimal(num, 2)
     if decimal_val >= 2**k:
-        return "Overflow" # Can't take complement of number that already exceeds k bits
-    
-    # Standard 2's complement calculation for a positive number
-    result = 2**k - decimal_val
+        return "Overflow!"
+    result = 2**k - decimal_val if not n else decimal_val
     return decimal_to_base(result, 2, k)
 
 # === Background Rain (unchanged) ===
@@ -259,7 +256,7 @@ class DynamicConverterApp(QWidget):
                 
                 # Pass k to the integer part conversion
                 converted_int = decimal_to_base(int_part, to_b, k)
-                if converted_int == "Overflow":
+                if converted_int == "Overflow!":
                     raise ValueError("Overflow in integer part")
 
                 result = converted_int
@@ -276,7 +273,7 @@ class DynamicConverterApp(QWidget):
 
             # --- DISPLAY OVERFLOW ---
             # Check if the function returned the specific "Overflow" error string.
-            if result == "Overflow":
+            if result == "Overflow!":
                 self.result_base.setText("Error: Overflow")
             else:
                 self.result_base.setText(f"Result: {result}")
@@ -315,7 +312,7 @@ class DynamicConverterApp(QWidget):
             k = int(self.input_k.text())
             result = two_complement(num, k)
 
-            if result == "Overflow":
+            if result == "Overflow!":
                 self.result_twos.setText("Error: Overflow")
             else:
                 self.result_twos.setText(f"2's Complement: {result}")

@@ -171,6 +171,8 @@ class DynamicConverterApp(QWidget):
         panel.setLayout(layout)
         return panel
 
+# Inside class DynamicConverterApp...
+
     def create_base_panel(self):
         panel = MovingSymbolsBackground()
         layout = QVBoxLayout()
@@ -183,17 +185,22 @@ class DynamicConverterApp(QWidget):
         self.input_to = QLineEdit()
         self.input_to.setPlaceholderText("To Base")
 
-        # --- NEW WIDGET ---
-        # Added a QLineEdit for the user to input the number of bits (k).
         self.input_k_base = QLineEdit()
         self.input_k_base.setPlaceholderText("Number of Bits (k) - Optional")
 
         self.checkbox_signed = QCheckBox("Is your number signed?")
         self.checkbox_decimal = QCheckBox("Is your number decimal?")
         self.checkbox_decimal.stateChanged.connect(self.toggle_decimal_digits_input)
+
+        # ✨ NEW INPUT FIELDS
+        self.input_decimal_whole_digits = QLineEdit()
+        self.input_decimal_whole_digits.setPlaceholderText("Digits to treat as decimal (d0)")
         self.input_decimal_digits = QLineEdit()
-        self.input_decimal_digits.setPlaceholderText("Digits after decimal")
+        self.input_decimal_digits.setPlaceholderText("Digits after conversion (d1)")
+
+        self.input_decimal_whole_digits.setVisible(False)
         self.input_decimal_digits.setVisible(False)
+
         self.result_base = QLabel("Result will appear here")
         self.result_base.setWordWrap(True)
         btn = QPushButton("Convert")
@@ -205,11 +212,11 @@ class DynamicConverterApp(QWidget):
         layout.addWidget(self.input_number)
         layout.addWidget(self.input_from)
         layout.addWidget(self.input_to)
-        # --- ADDED WIDGET TO LAYOUT ---
         layout.addWidget(self.input_k_base)
         layout.addWidget(self.checkbox_signed)
         layout.addWidget(self.checkbox_decimal)
-        layout.addWidget(self.input_decimal_digits)
+        layout.addWidget(self.input_decimal_whole_digits)  # d0
+        layout.addWidget(self.input_decimal_digits)        # d1
         layout.addWidget(btn)
         layout.addWidget(self.result_base)
         layout.addWidget(back_btn)
@@ -217,16 +224,15 @@ class DynamicConverterApp(QWidget):
         return panel
 
     def toggle_decimal_digits_input(self, state):
-        self.input_decimal_digits.setVisible(state == Qt.Checked)
+        show = state == Qt.Checked
+        self.input_decimal_digits.setVisible(show)
+        self.input_decimal_whole_digits.setVisible(show)
 
-    # MODIFIED: Logic to get K and handle the "Overflow" return string.
     def run_base_conversion(self):
         try:
             num_str = self.input_number.text()
             from_b = int(self.input_from.text())
             to_b = int(self.input_to.text())
-            
-            # Get k from the new input field. Default to 0 if empty.
             k_text = self.input_k_base.text()
             k = int(k_text) if k_text else 0
 
@@ -236,49 +242,25 @@ class DynamicConverterApp(QWidget):
             if not is_signed and num_str.startswith("-"):
                 raise ValueError("Sign not allowed for unsigned number.")
 
-            # This part for decimal/fractional numbers remains unchanged
             if is_decimal:
-                # (Your existing logic for fractional numbers)
-                digits_after = int(self.input_decimal_digits.text())
-                if "." in num_str:
-                    whole, frac = num_str.split(".")
-                    dec_value = base_to_decimal(whole, from_b)
-                    frac_value = sum(
-                        base_to_decimal(ch, from_b) * (from_b ** -(i + 1))
-                        for i, ch in enumerate(frac)
-                    )
-                    final_decimal = dec_value + frac_value
-                else:
-                    final_decimal = base_to_decimal(num_str, from_b)
+                d0 = int(self.input_decimal_whole_digits.text())
+                d1 = int(self.input_decimal_digits.text())
 
-                int_part = int(final_decimal)
-                frac_part = final_decimal - int_part
-                
-                # Pass k to the integer part conversion
-                converted_int = decimal_to_base(int_part, to_b, k)
-                if converted_int == "Overflow!":
-                    raise ValueError("Overflow in integer part")
+                # Convert input number string to decimal float from base
+                dec_val = base_to_decimal(num_str, from_b, d=d0, u=is_signed)
 
-                result = converted_int
-                if frac_part > 0:
-                    result += "."
-                    for _ in range(digits_after):
-                        frac_part *= to_b
-                        digit = int(frac_part)
-                        result += decimal_to_base(digit, to_b, 0) # k=0 for single digits
-                        frac_part -= digit
+                # Convert from decimal to target base
+                result = decimal_to_base(dec_val, to_b, k, d1, u=is_signed)
             else:
-                # Pass k to the main conversion function
                 result = convert_between_bases(num_str, from_b, to_b, k, u=is_signed)
 
-            # --- DISPLAY OVERFLOW ---
-            # Check if the function returned the specific "Overflow" error string.
             if result == "Overflow!":
                 self.result_base.setText("Error: Overflow")
             else:
                 self.result_base.setText(f"Result: {result}")
         except Exception as e:
             self.result_base.setText(f"Error: {str(e)}")
+
 
 
     def create_twos_panel(self):

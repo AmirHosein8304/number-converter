@@ -17,7 +17,7 @@ def decimal_to_base(num, base, k=None, d=0, u=False):
     f = False
     if num % 1 != 0:
         f = True
-    if num <= 0:
+    if u and num <= 0:
         num = two_complement(abs(num), k)
     if num == 0:
         return "0"

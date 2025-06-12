@@ -42,7 +42,7 @@ def decimal_to_base(num, base, k=None, d=0):
     
     return "".join(map(str, digits))
 
-def base_to_decimal(num_str, base, k=None, d=0):
+def base_to_decimal(num_str, base, k=None, d=0,u=False):
     num_str = list(str(num_str))
     if not k:
         k = len(num_str)
@@ -66,6 +66,8 @@ def base_to_decimal(num_str, base, k=None, d=0):
         if value >= base:
             raise ValueError(f"Invalid digit {num_str[i]} for base {base}")
         decimal += value * base ** (k - d - i - 1)
+    if u and decimal >= 2**k-1:
+        decimal -= 2**k
     return decimal
 
 def convert_between_bases(num_str, from_base, to_base, k, d1=0, d2=0):

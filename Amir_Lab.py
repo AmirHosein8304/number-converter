@@ -305,3 +305,6 @@ if __name__ == "__main__":
     window = DynamicConverterApp()
     window.show()
     sys.exit(app.exec_())
+
+
+#this is my code

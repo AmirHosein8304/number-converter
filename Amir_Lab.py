@@ -246,12 +246,7 @@ class DynamicConverterApp(QWidget):
             if is_decimal:
                 d0 = int(self.input_decimal_whole_digits.text())
                 d1 = int(self.input_decimal_digits.text())
-
-                # Convert input number string to decimal float from base
-                dec_val = base_to_decimal(num_str, from_b, d=d0, u=is_signed)
-
-                # Convert from decimal to target base
-                result = decimal_to_base(dec_val, to_b, k, d1, u=is_signed)
+                result = convert_between_bases(num_str, from_b, to_b, k, d1=d0, d2=d1, u=is_signed)
             else:
                 result = convert_between_bases(num_str, from_b, to_b, k, u=is_signed)
 
@@ -261,6 +256,7 @@ class DynamicConverterApp(QWidget):
                 self.result_base.setText(f"Result: {result}")
         except Exception as e:
             self.result_base.setText(f"Error: {str(e)}")
+
 
 
 

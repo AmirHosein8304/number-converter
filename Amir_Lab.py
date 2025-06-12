@@ -10,6 +10,8 @@ from PyQt5.QtGui import QPalette, QColor, QFont, QPainter, QPen, QFontDatabase
 
 # === Your Logic (with Overflow Check) ===
 def decimal_to_base(num, base, k=None, d=0, u=False):
+    if u and num <= 0:
+        num = two_complement(abs(num), k)
     if k==0:
         k = int(log(num,base)) + 1
     if k < d:
@@ -17,8 +19,6 @@ def decimal_to_base(num, base, k=None, d=0, u=False):
     f = False
     if num % 1 != 0:
         f = True
-    if u and num <= 0:
-        num = two_complement(abs(num), k)
     if num == 0:
         return "0"
     if not f:
@@ -66,7 +66,7 @@ def base_to_decimal(num_str, base, k=None, d=0,u=False):
         if value >= base:
             raise ValueError(f"Invalid digit {num_str[i]} for base {base}")
         decimal += value * base ** (k - d - i - 1)
-    if u and decimal >= 2**k-1:
+    if u and decimal >= 2**(k-1):
         decimal -= 2**k
     return decimal
 

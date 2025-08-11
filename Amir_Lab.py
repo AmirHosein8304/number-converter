@@ -1,4 +1,4 @@
-from math import log
+from math import log,ceil
 import sys
 import random
 from PyQt5.QtWidgets import (
@@ -10,25 +10,32 @@ from PyQt5.QtGui import QPalette, QColor, QFont, QPainter, QPen, QFontDatabase
 
 # === Your Logic (with Overflow Check) ===
 def decimal_to_base(num, base, k=None, d=0, u=False):
-    num = int(num)
-    if u and num <= 0:
-        num = two_complement(decimal_to_base(abs(num),2,k), k-d, True)
-    if k==0:
-        k = int(log(num,base)) + 1
+    if base>36:
+        raise ValueError("Invalid base")
+    flag = False
+    if base != 2 and u:
+        raise ValueError("Invalid base for two's complement")
+    num = float(num)
+    #c = -1 if num % 1 != 0 else 0
+    if not k:
+        flag = True
+        k = ceil(log(abs(num), base)) + d + 1 if u else ceil(log(num, base)) + d
+    if u and num <= 0 and base==2:
+        return two_complement(abs(num), k-d, d, True)
     if k < d:
         return "Overflow!"
-    f = False
-    if num % 1 != 0:
-        f = True
     if num == 0:
         return "0"
-    if not f:
-        digits = [0] * k
-    else:
-        digits = [0] * (k - d)
+    digits = [0] * (k-d)
     while num >= 1:
         try:
             digits[k - d - 1 - int(log(num, base))] = int(num // (base ** int(log(num, base))))
+            if digits[k - d - 1 - int(log(num, base))] >= 9:
+                digits[k - d - 1 - int(log(num, base))] = chr(ord('A') + digits[k - d - 1 - int(log(num, base))] - 10)
+                try:
+                    digits.pop(k-d-int(log(num,base)))
+                except:
+                    pass
             num = num % (base ** int(log(num, base)))
         except IndexError:
             return "Overflow!"
@@ -37,7 +44,13 @@ def decimal_to_base(num, base, k=None, d=0, u=False):
         for i in range(d):
             if num == 0:
                 break
-            f_digits[abs(int(log(num, base))) - 1] = int(num // (base ** int(log(num, base))))
+            try:
+                if num<0:
+                    f_digits[abs(int(log(abs(num), base))) - 1] = int(num // (base ** int(log(num, base)-1)))
+                else:
+                    f_digits[abs(int(log(abs(num), base))) - 1] = int(num // (base ** int(log(num, base))))
+            except:
+                break
             num = num % (base ** int(log(num, base)))
         digits.extend(f_digits)
     
@@ -72,15 +85,16 @@ def base_to_decimal(num_str, base, k=None, d=0,u=False):
     return decimal
 
 def convert_between_bases(num_str, from_base, to_base, k, d1=0, d2=0, u=False):
-    decimal = base_to_decimal(num_str, from_base, len(str(num_str)), d1, u) if from_base != 10 else num_str
-    return decimal_to_base(decimal, to_base, k, d2, u) if (to_base != 10 and decimal != "Overflow!") else decimal
+    decimal = base_to_decimal(num_str, from_base, len(str(num_str)), d1, u) if from_base != 10 else float(num_str)
+    if to_base == 10:
+        return str(round(decimal,d2))
+    return decimal_to_base(decimal, to_base, k, d2, u) if decimal != "Overflow!" else decimal
 
-def two_complement(num, k , n=False):
-    decimal_val = base_to_decimal(num, 2)
-    if decimal_val >= 2**k:
+def two_complement(num, k ,d , n=False):
+    if num >= 2**k:
         return "Overflow!"
-    result = 2**k - decimal_val if not n else decimal_val
-    return decimal_to_base(result, 2, k)
+    result = 2**k - num if n else num
+    return decimal_to_base(result, 2, k+d, d)
 
 # === Background Rain (unchanged) ===
 class MovingSymbolsBackground(QFrame):
@@ -305,6 +319,3 @@ if __name__ == "__main__":
     window = DynamicConverterApp()
     window.show()
     sys.exit(app.exec_())
-
-
-#this is my code

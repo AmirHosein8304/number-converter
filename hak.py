@@ -131,6 +131,8 @@ def b_sum(a, b, k, d0=0, d1=0):
                 c.insert(0,i_b[i])
     if len(c)>k:
         return "Overflow"
+    for i in range(k-len(c)):
+        c.insert(0,'0')
     return ''.join(c)
 
 def subtraction(a, b, k, d0=0, d1=0):
@@ -513,10 +515,8 @@ class DynamicConverterApp(QWidget):
             self.add_sub_result.setText(f"Error: {str(e)}")
 
 # === App Execution ===
-'''if __name__ == "__main__":
+if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = DynamicConverterApp()
     window.show()
-    sys.exit(app.exec_())'''
-    
-print(subtraction(1000,'0001',5))
+    sys.exit(app.exec_())

@@ -96,6 +96,48 @@ def two_complement(num, k ,d , n=False):
     result = 2**k - num if n else num
     return decimal_to_base(result, 2, k+d, d)
 
+def b_sum(a, b, k, d0=0, d1=0):
+    f_a = list(reversed(list(str(a))[:d0]))
+    f_b = list(reversed(list(str(b))[:d1]))
+    i_a = list(reversed(list(str(a))[d0:]))
+    i_b = list(reversed(list(str(b))[d1:]))
+    c = []
+    if f_a or f_b:
+        for i in range(max(len(f_a),len(f_b))):
+            try:
+                if int(f_a[i])+int(f_b[i])<2:
+                    c.insert(0,str(int(f_a[i])+int(f_b[i])))
+                else:
+                    c.insert(0,'0')
+                    c.insert(0,'1')
+            except IndexError:
+                if len(f_a)>len(f_b):
+                    c.insert(0,f_a[i])
+                else:
+                    c.insert(0,f_b[i])
+    
+    for i in range(max(k,len(i_a),len(i_b))):
+        if i>len(i_a)-1 and i>len(i_b)-1:
+            break
+        try:
+            if int(i_a[i])+int(i_b[i])<2:
+                c.insert(0,str(int(i_a[i])+int(i_b[i])))
+            else:
+                c.insert(0,'0')
+                c.insert(0,'1')
+        except IndexError:
+            if len(i_a)>len(i_b):
+                c.insert(0,i_a[i])
+            else:
+                c.insert(0,i_b[i])
+    if len(c)>k:
+        return "Overflow"
+    return ''.join(c)
+
+def subtraction(a, b, k, d0=0, d1=0, u0=False, u1=False):
+    num = two_complement(base_to_decimal(b, 2, k, d1))
+    
+
 # === Background Rain (unchanged) ===
 class MovingSymbolsBackground(QFrame):
     def __init__(self):
@@ -314,8 +356,9 @@ class DynamicConverterApp(QWidget):
             self.result_twos.setText(f"Error: {str(e)}")
 
 # === App Execution ===
-if __name__ == "__main__":
+'''if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = DynamicConverterApp()
     window.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec_())'''
+print(b_sum(1000,1000,5))

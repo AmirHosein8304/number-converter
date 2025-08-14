@@ -18,7 +18,6 @@ def decimal_to_base(num, base, k=None, d=0, u=False):
     num = float(num)
     #c = -1 if num % 1 != 0 else 0
     if not k:
-        flag = True
         k = ceil(log(abs(num), base)) + d + 1 if u else ceil(log(num, base)) + d
     if u and num <= 0 and base==2:
         return two_complement(abs(num), k-d, d, True)
@@ -93,8 +92,55 @@ def convert_between_bases(num_str, from_base, to_base, k, d1=0, d2=0, u=False):
 def two_complement(num, k ,d , n=False):
     if num >= 2**k:
         return "Overflow!"
-    result = 2**k - num if n else num
+    result = 2**k - num
     return decimal_to_base(result, 2, k+d, d)
+
+def b_sum(a, b, k, d0=0, d1=0):
+    f_a = list(reversed(list(str(a))[:d0]))
+    f_b = list(reversed(list(str(b))[:d1]))
+    i_a = list(reversed(list(str(a))[d0:]))
+    i_b = list(reversed(list(str(b))[d1:]))
+    c = []
+    if f_a or f_b:
+        for i in range(max(len(f_a),len(f_b))):
+            try:
+                if int(f_a[i])+int(f_b[i])<2:
+                    c.insert(0,str(int(f_a[i])+int(f_b[i])))
+                else:
+                    c.insert(0,'0')
+                    c.insert(0,'1')
+            except IndexError:
+                if len(f_a)>len(f_b):
+                    c.insert(0,f_a[i])
+                else:
+                    c.insert(0,f_b[i])
+    
+    for i in range(max(k,len(i_a),len(i_b))):
+        if i>len(i_a)-1 and i>len(i_b)-1:
+            break
+        try:
+            if int(i_a[i])+int(i_b[i])<2:
+                c.insert(0,str(int(i_a[i])+int(i_b[i])))
+            else:
+                c.insert(0,'0')
+                c.insert(0,'1')
+        except IndexError:
+            if len(i_a)>len(i_b):
+                c.insert(0,i_a[i])
+            else:
+                c.insert(0,i_b[i])
+    if len(c)>k:
+        return "Overflow"
+    return ''.join(c)
+
+def subtraction(a, b, k, d0=0, d1=0):
+    b = two_complement(base_to_decimal(b, 2, len(b), d1),len(b),d1)
+    return b_sum(a, b, k, d0, d1)
+
+def operator(a, b, k, ind, d0=0, d1=0):
+    if ind:
+        return b_sum(a, b, k, d0, d1)
+    return subtraction(a, b, k, d0, d1)
 
 # === Background Rain (unchanged) ===
 class MovingSymbolsBackground(QFrame):
@@ -467,8 +513,10 @@ class DynamicConverterApp(QWidget):
             self.add_sub_result.setText(f"Error: {str(e)}")
 
 # === App Execution ===
-if __name__ == "__main__":
+'''if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = DynamicConverterApp()
     window.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec_())'''
+    
+print(subtraction(1000,'0001',5))

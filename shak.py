@@ -96,47 +96,56 @@ def two_complement(num, k ,d , n=False):
     return decimal_to_base(result, 2, k+d, d)
 
 def b_sum(a, b, k, d0=0, d1=0):
-    f_a = list(reversed(list(str(a))[:d0]))
-    f_b = list(reversed(list(str(b))[:d1]))
-    i_a = list(reversed(list(str(a))[d0:]))
-    i_b = list(reversed(list(str(b))[d1:]))
-    c = []
+    f_a = list(reversed(list(str(a))))[:d0]
+    f_b = list(reversed(list(str(b))))[:d1]
+    i_a = list(reversed(list(str(a))))[d0:]
+    i_b = list(reversed(list(str(b))))[d1:]
+    c = 0
+    result = []
     if f_a or f_b:
         for i in range(max(len(f_a),len(f_b))):
             try:
-                if int(f_a[i])+int(f_b[i])<2:
-                    c.insert(0,str(int(f_a[i])+int(f_b[i])))
+                if int(f_a[i]) + int(f_b[i])+c < 2:
+                    result.insert(0,str(int(f_a[i])+int(f_b[i])+c))
+                    c = 0
+                elif int(f_a[i]) + int(f_b[i])+c == 2:
+                    result.insert(0,'0')
+                    c = 1
                 else:
-                    c.insert(0,'0')
-                    c.insert(0,'1')
+                    result.insert(0,'1')
+                    c = 1
             except IndexError:
                 if len(f_a)>len(f_b):
-                    c.insert(0,f_a[i])
+                    result.insert(0,f_a[i])
                 else:
-                    c.insert(0,f_b[i])
+                    result.insert(0,f_b[i])
     
     for i in range(max(k,len(i_a),len(i_b))):
         if i>len(i_a)-1 and i>len(i_b)-1:
             break
         try:
-            if int(i_a[i])+int(i_b[i])<2:
-                c.insert(0,str(int(i_a[i])+int(i_b[i])))
+            if int(i_a[i]) + int(i_b[i])+c < 2:
+                    result.insert(0,str(int(i_a[i])+int(i_b[i])+c))
+                    c = 0
+            elif int(i_a[i]) + int(i_b[i])+c == 2:
+                result.insert(0,'0')
+                c = 1
             else:
-                c.insert(0,'0')
-                c.insert(0,'1')
+                result.insert(0,'1')
+                c = 1
         except IndexError:
             if len(i_a)>len(i_b):
-                c.insert(0,i_a[i])
+                result.insert(0,i_a[i])
             else:
-                c.insert(0,i_b[i])
-    if len(c)>k:
+                result.insert(0,i_b[i])
+    if len(result)>k:
         return "Overflow"
-    for i in range(k-len(c)):
-        c.insert(0,'0')
-    return ''.join(c)
+    for i in range(k-len(result)):
+        result.insert(0,'0')
+    return ''.join(result)
 
 def subtraction(a, b, k, d0=0, d1=0):
-    b = two_complement(base_to_decimal(b, 2, len(b), d1),len(b),d1)
+    b = two_complement(base_to_decimal(b, 2, len(b), d1),len(b)-d1,d1)
     return b_sum(a, b, k, d0, d1)
 
 # === Background Rain (unchanged) ===

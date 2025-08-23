@@ -268,7 +268,7 @@ class DynamicConverterApp(QWidget):
         self.checkbox_decimal = QCheckBox("Is your number decimal?")
         self.checkbox_decimal.stateChanged.connect(self.toggle_decimal_digits_input)
 
-        # ✨ NEW INPUT FIELDS
+        # NEW INPUT FIELDS
         self.input_decimal_whole_digits = QLineEdit()
         self.input_decimal_whole_digits.setPlaceholderText("Digits to treat as decimal (d0)")
         self.input_decimal_digits = QLineEdit()
